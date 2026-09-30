@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+data/
+cache/
+results/
+paper/
+*.npy
+*.npz
+*.f16
+*.pkl
+.DS_Store
