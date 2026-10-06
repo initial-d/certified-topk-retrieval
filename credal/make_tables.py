@@ -298,7 +298,7 @@ def table_determinacy():
                         f"{cr['decision']['lower_bound_mean']:.0f} & {cr['simultaneous']['lower_bound_mean']:.0f} \\\\")
         rows.append("\\midrule")
     w("determinacy.tex", "\\begin{tabular}{ll cc rr rr}\n\\toprule\n"
-      "& & \\multicolumn{2}{c}{Level $\\hat\\theta$} & \\multicolumn{2}{c}{$|U_{10}|$ (credal top-10)} & "
+      "& & \\multicolumn{2}{c}{Level $\\hat\\theta$} & \\multicolumn{2}{c}{$|U_{10}|$ (candidate set)} & "
       "\\multicolumn{2}{c}{Oracle cost $|A(q)|$}\\\\\n"
       "\\cmidrule(lr){3-4}\\cmidrule(lr){5-6}\\cmidrule(lr){7-8}\n"
       "Dataset & Index & dec. & cov. & dec. & cov. & dec. & cov. \\\\\n\\midrule\n"

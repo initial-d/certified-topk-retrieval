@@ -5,6 +5,7 @@ import glob
 import json
 import os
 import pickle
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
@@ -425,3 +426,54 @@ if __name__ == "__main__":
                scaling=fig_scaling, families=fig_families)
     for w_ in which:
         fns[w_]()
+
+
+# ------------------------------------------------------------------ regime map: residual vs rank boxes against the calibrated level
+def fig_regimes():
+    hr = json.load(open(os.path.join(RESULTS_DIR, "hybrid_resplit.json")))
+    ms = json.load(open(os.path.join(RESULTS_DIR, "msmarco", "report.json")))
+    pts = []
+    for key, v in hr.items():
+        d, q = key.split(".")
+        c = json.load(open(os.path.join(RESULTS_DIR, "certify", f"{d}.bge.{q}.json")))["coverage_dec"]["0.1"]["c"]
+        pts.append((c, v["cost_ratio_residual"], "beir", q))
+    for q, o in ms.items():
+        o = o["0.1"]
+        pts.append((o["c_dec"], o["cost_dec_mean"] / o["confdepth"], "ms", q))
+    fig, ax = plt.subplots(figsize=(5.2, 2.7))
+    ax.axvspan(0.2, 0.3, color=GRID, alpha=0.6, lw=0)
+    b = [p for p in pts if p[2] == "beir"]
+    m = [p for p in pts if p[2] == "ms"]
+    ax.scatter([p[0] for p in b], [p[1] for p in b], s=16, color=BLUE, lw=0, alpha=0.85, label="BEIR (30 configurations)")
+    ax.scatter([p[0] for p in m], [p[1] for p in m], s=44, marker="D", facecolor="white", edgecolor=ORANGE, lw=1.5,
+               zorder=5, label="MS MARCO")
+    for p in m:
+        ax.annotate(QNICE[p[3]], (p[0], p[1]), xytext=(6, 2), textcoords="offset points", fontsize=6.5, color=INK2)
+    ax.axhline(1, color=INK2, lw=0.9)
+    ax.set_yscale("log")
+    ax.set_yticks([0.5, 1, 2, 5, 10, 20])
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}$\\times$"))
+    ax.yaxis.set_minor_formatter(NullFormatter())
+    ax.set_ylim(0.5, 32)
+    ax.set_xlim(0.03, 0.74)
+    ax.set_xlabel("decision-calibrated level $\\hat\\theta$ of residual boxes")
+    ax.set_ylabel("residual / rank cost")
+    ax.legend(loc="upper left", fontsize=7)
+    fig.tight_layout()
+    save(fig, "regimes.pdf")
+    lo = [p[1] for p in pts if p[0] < 0.2]
+    mid = [p[1] for p in pts if 0.2 <= p[0] < 0.3]
+    hi = [p[1] for p in pts if p[0] >= 0.3]
+    assert all(x < 1 for x in lo), "a low-level configuration favours rank boxes"
+    macros = {"REGLOWN": str(len(lo)), "REGLOWRANGE": f"{min(lo):.2f}--{max(lo):.2f}", "REGMIDN": str(len(mid)),
+              "REGMIDRANGE": f"{min(mid):.2f}--{max(mid):.2f}", "REGHIGHN": str(len(hi)), "REGHIGHMIN": f"{min(hi):.2f}",
+              "REGHIGHMAX": f"{max(hi):.1f}"}
+    tab = os.path.join(os.path.dirname(RESULTS_DIR), "paper", "tables", "regime_macros.tex")
+    open(tab, "w").write("".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in macros.items()))
+    for q_ in ("pq16", "pq32", "pq96", "opq32", "sq4", "bin"):
+        print(q_, sorted((round(p[0], 3), round(p[1], 2), p[2]) for p in pts if p[3] == q_))
+    print(macros)
+
+
+if __name__ == "__main__" and sys.argv[1:] == ["regimes"]:
+    fig_regimes()
